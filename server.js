@@ -30,20 +30,26 @@ wss.on('connection', (ws, req) => {
   // 從 URL 查詢參數中獲取裝置 ID
   const deviceId = new URLSearchParams(req.url.split('?')[1]).get('deviceId');
 
-  // 將裝置 ID 與 WebSocket 連接關聯起來
-  deviceConnections.set(deviceId, ws);
-
-  // 發送在線使用者計數給所有客戶端
-  broadcastOnlineUserCount();
-
-  // WebSocket 關閉事件
-  ws.on('close', () => {
-    // 從 Map 中移除裝置 ID 對應的 WebSocket 連接
-    deviceConnections.delete(deviceId);
+  // 如果 deviceId 為 null，不進行與裝置 ID 相關的處理
+  if (deviceId !== null) {
+    // 將裝置 ID 與 WebSocket 連接關聯起來
+    deviceConnections.set(deviceId, ws);
 
     // 發送在線使用者計數給所有客戶端
     broadcastOnlineUserCount();
-  });
+
+    // WebSocket 關閉事件
+    ws.on('close', () => {
+      // 從 Map 中移除裝置 ID 對應的 WebSocket 連接
+      deviceConnections.delete(deviceId);
+
+      // 發送在線使用者計數給所有客戶端
+      broadcastOnlineUserCount();
+    });
+  } else {
+    // 發送在線使用者計數給所有客戶端（不使用裝置 ID）
+    broadcastOnlineUserCount();
+  }
 });
 
 // 广播在線使用者計數給所有客戶端
