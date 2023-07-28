@@ -14,26 +14,32 @@ wss.on('connection', (ws, req) => {
   // 從 URL 查詢參數中獲取裝置 ID
   const deviceId = new URLSearchParams(req.url.split('?')[1]).get('deviceId');
 
-  // 如果 deviceId 為 null，不進行與裝置 ID 相關的處理
-  if (deviceId !== null) {
-    // 將裝置 ID 與 WebSocket 連接關聯起來
-    deviceConnections.set(deviceId, ws);
+  // 判斷是否為查看在線人數的連線
+  if (deviceId === 'viewer') {
+    handleViewerConnection(ws);
+    return;
+  }
+
+  // 如果 deviceId 為 null，關閉連線
+  if (deviceId === null) {
+    ws.close();
+    return;
+  }
+
+  // 將裝置 ID 與 WebSocket 連接關聯起來
+  deviceConnections.set(deviceId, ws);
+
+  // 發送在線使用者計數給所有客戶端
+  broadcastOnlineUserCount();
+
+  // WebSocket 關閉事件
+  ws.on('close', () => {
+    // 從 Map 中移除裝置 ID 對應的 WebSocket 連接
+    deviceConnections.delete(deviceId);
 
     // 發送在線使用者計數給所有客戶端
     broadcastOnlineUserCount();
-
-    // WebSocket 關閉事件
-    ws.on('close', () => {
-      // 從 Map 中移除裝置 ID 對應的 WebSocket 連接
-      deviceConnections.delete(deviceId);
-
-      // 發送在線使用者計數給所有客戶端
-      broadcastOnlineUserCount();
-    });
-  } else {
-    // 發送在線使用者計數給所有客戶端（不使用裝置 ID）
-    broadcastOnlineUserCount();
-  }
+  });
 });
 
 // 广播在線使用者計數給所有客戶端
@@ -49,6 +55,20 @@ function broadcastOnlineUserCount() {
       ws.send(JSON.stringify(message));
     }
   });
+}
+
+// 處理查看在線人數的連線
+function handleViewerConnection(ws) {
+  // 發送目前的在線人數給查看在線人數的連線
+  const message = {
+    type: 'online_users',
+    count: deviceConnections.size
+  };
+
+  ws.send(JSON.stringify(message));
+
+  // 關閉查看在線人數的連線
+  ws.close();
 }
 
 // 開始伺服器監聽
