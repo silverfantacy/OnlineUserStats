@@ -1,26 +1,10 @@
-const express = require('express');
-const app = express();
-const https = require('https');
-const fs = require('fs');
 const WebSocket = require('ws');
 
 // 設定伺服器端口
 const port = 8080;
 
-// 設置靜態資源資料夾
-app.use(express.static('public'));
-
-// 讀取 SSL/TLS 憑證
-const serverOptions = {
-  key: fs.readFileSync('path/to/private_key.pem'),
-  cert: fs.readFileSync('path/to/certificate.pem'),
-};
-
-// 創建 HTTPS 伺服器
-const server = https.createServer(serverOptions, app);
-
 // 創建 WebSocket 伺服器
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ port });
 
 // 使用 Map 來存儲裝置 ID 與 WebSocket 連接的對應關係
 const deviceConnections = new Map();
@@ -68,6 +52,6 @@ function broadcastOnlineUserCount() {
 }
 
 // 開始伺服器監聽
-server.listen(port, () => {
-  console.log(`Server is running on https://your_domain:${port}`);
+wss.on('listening', () => {
+  console.log(`Server is running on port ${port}`);
 });
