@@ -1,33 +1,45 @@
 const express = require('express');
 const app = express();
+const https = require('https');
+const fs = require('fs');
 const WebSocket = require('ws');
 
 // 設定伺服器端口
-const port = 3000;
+const port = 8080;
 
 // 設置靜態資源資料夾
 app.use(express.static('public'));
 
-// 創建 WebSocket 伺服器
-const wss = new WebSocket.Server({ port: 8080 });
+// 讀取 SSL/TLS 憑證
+const serverOptions = {
+  key: fs.readFileSync('path/to/private_key.pem'),
+  cert: fs.readFileSync('path/to/certificate.pem'),
+};
 
-// 在線使用者計數
-let onlineUsers = 0;
+// 創建 HTTPS 伺服器
+const server = https.createServer(serverOptions, app);
+
+// 創建 WebSocket 伺服器
+const wss = new WebSocket.Server({ server });
+
+// 使用 Map 來存儲裝置 ID 與 WebSocket 連接的對應關係
+const deviceConnections = new Map();
 
 // WebSocket 連接事件
-wss.on('connection', (ws) => {
-  // 新的客戶端連接，增加在線使用者計數
-  onlineUsers++;
-  console.log('New client connected. Online users:', onlineUsers);
+wss.on('connection', (ws, req) => {
+  // 從 URL 查詢參數中獲取裝置 ID
+  const deviceId = new URLSearchParams(req.url.split('?')[1]).get('deviceId');
+
+  // 將裝置 ID 與 WebSocket 連接關聯起來
+  deviceConnections.set(deviceId, ws);
 
   // 發送在線使用者計數給所有客戶端
   broadcastOnlineUserCount();
 
   // WebSocket 關閉事件
   ws.on('close', () => {
-    // 客戶端斷開連接，減少在線使用者計數
-    onlineUsers--;
-    console.log('Client disconnected. Online users:', onlineUsers);
+    // 從 Map 中移除裝置 ID 對應的 WebSocket 連接
+    deviceConnections.delete(deviceId);
 
     // 發送在線使用者計數給所有客戶端
     broadcastOnlineUserCount();
@@ -38,22 +50,18 @@ wss.on('connection', (ws) => {
 function broadcastOnlineUserCount() {
   const message = {
     type: 'online_users',
-    count: onlineUsers
+    count: deviceConnections.size
   };
 
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(message));
+  // 向所有已連接的客戶端發送消息
+  deviceConnections.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
     }
   });
 }
 
-// 建立一個 API 端點用於取得在線人數
-app.get('/api/onlineUsers', (req, res) => {
-  res.json({ count: onlineUsers });
-});
-
 // 開始伺服器監聽
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+server.listen(port, () => {
+  console.log(`Server is running on https://your_domain:${port}`);
 });
