@@ -10,12 +10,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Online User Count</title>
+  <title>在線人數統計</title>
 </head>
 <body>
-  <h1>在線使用者計數： <span id="onlineCount">0</span></h1>
+  <h1>在線人數: <span id="onlineUsers">Loading...</span></h1>
 
   <script>
     // 函數來解析 Google Analytics 的 _ga cookie 值，獲取裝置 ID
@@ -32,26 +30,31 @@
     }
 
     // 從 Google Analytics 的 _ga cookie 中獲取裝置 ID
-    const gaId = getGAID();
+    const gaID = getGAID();
 
     // 連接到 WebSocket 伺服器，將裝置 ID 作為查詢參數傳遞
-    const socket = new WebSocket(`wss://your_websocket_server:8080?gaId=${gaId}`);
+    const socket = new WebSocket(`wss://your_websocket_server?gaId=${gaID}`);
 
+    // type=all_online_users 用來查看所有資料 
+    // const socket = new WebSocket(`wss://your_websocket_server?type=all_online_users`);
+
+    // WebSocket 連接開啟事件
     socket.onopen = () => {
-      console.log('WebSocket 連線已建立');
+      console.log('WebSocket connection opened.');
     };
 
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-
-      if (message.type === 'online_users') {
-        const onlineCountElement = document.getElementById('onlineCount');
-        onlineCountElement.textContent = message.count;
-      }
-    };
-
+    // WebSocket 連接關閉事件
     socket.onclose = () => {
-      console.log('WebSocket 連線已關閉');
+      console.log('WebSocket connection closed.');
+    };
+
+    // WebSocket 接收訊息事件
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'online_users') {
+        document.getElementById('onlineUsers').innerText = data.count;
+      }
     };
   </script>
 </body>
