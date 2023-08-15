@@ -21,6 +21,7 @@ const wss = new WebSocket.Server({
 });
 
 // 使用 Map 來存儲 gaId 到 WebSocket 連接的對應關係
+// 同時也存儲主機名與 WebSocket 連接的對應關係
 const webConnections = new Map();
 
 // 使用 Map 來存儲主機名到對應的 gaId 集合
@@ -41,7 +42,10 @@ wss.on('connection', (ws, req) => {
   }
 
   // 將 gaId 與 WebSocket 連接關聯起來
-  webConnections.set(gaId, ws);
+  webConnections.set(ws, {
+    gaId: gaId,
+    hostname: hostname
+  });
 
   // 將 gaId 與主機名關聯起來
   associateGaIdWithHostname(gaId, hostname);
@@ -51,14 +55,17 @@ wss.on('connection', (ws, req) => {
 
   // WebSocket 關閉事件
   ws.on('close', () => {
-    // 從 Map 中移除 gaId 對應的 WebSocket 連接
-    webConnections.delete(gaId);
+    const connectionInfo = webConnections.get(ws);
+    if (connectionInfo) {
+      // 從 Map 中移除 gaId 對應的 WebSocket 連接
+      webConnections.delete(ws);
 
-    // 從主機名對應的 gaId 集合中移除 gaId
-    disassociateGaIdWithHostname(gaId, hostname);
+      // 從主機名對應的 gaId 集合中移除 gaId
+      disassociateGaIdWithHostname(connectionInfo.gaId, connectionInfo.hostname);
 
-    // 發送在線使用者計數給所有客戶端
-    broadcastOnlineUserCount();
+      // 發送在線使用者計數給所有客戶端
+      broadcastOnlineUserCount();
+    }
   });
 });
 
@@ -100,10 +107,13 @@ function broadcastOnlineUserCount() {
   });
 
   // 向所有已連接的客戶端發送消息
-  webConnections.forEach((ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
-    }
+  webConnections.forEach((connectionInfo, ws) => {
+    const hostname = connectionInfo.hostname;
+    let tempMessage = {
+      type: message.type,
+    };
+    tempMessage.count = hostnameToGaIds.get(hostname).size;
+    ws.send(JSON.stringify(tempMessage));
   });
 }
 
