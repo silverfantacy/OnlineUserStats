@@ -1,0 +1,30 @@
+*.log
+config.dev.json
+config.json
+deploy.sh
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose.yml
+Dockerfile
+.docker
+.dockerignore
+
+# Node
+node_modules/
+
+# Virtual environment
+.env
+.env.example
+.venv/
+venv/
+
+# PyCharm
+.idea
+
+# VS Code
+.vscode/

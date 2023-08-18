@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 require('dotenv').config(); // 引入 dotenv
 
 // 設定伺服器端口
-const port = 8080;
+const port = process.env.PORT || 8080;
 
 // 創建 WebSocket 伺服器
 const wss = new WebSocket.Server({

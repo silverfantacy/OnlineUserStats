@@ -1,5 +1,5 @@
 {
-  "name": "OnlineUserStats",
+  "name": "online-user-stats",
   "version": "1.0.0",
   "description": "A simple application to track online user statistics.",
   "main": "server.js",
